@@ -140,7 +140,7 @@ Possible future additions:
 
 Developed by:
 
-**[Your Name / Team Name]**
+**Mitakshi Sinha**
 
 ---
 
