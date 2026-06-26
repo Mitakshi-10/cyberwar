@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROBOT SWARM SIMULATOR</title>
+    <style>
+        :root {
+            --primary: #00f2ff;
+            --danger: #ff004c;
+            --success: #39ff14;
+            --bg: #050505;
+            --grid-line: #112233;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--primary);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            overflow: hidden;
+        }
+
+        #ui-wrapper {
+            display: grid;
+            grid-template-columns: 600px 300px;
+            gap: 20px;
+            padding: 20px;
+            border: 2px solid var(--primary);
+            background: rgba(0, 242, 255, 0.05);
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.1);
+            transition: all 0.3s;
+        }
+
+        /* GRID STYLING */
+        .map-section {
+            position: relative;
+        }
+
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            gap: 4px;
+            width: 500px;
+            height: 500px;
+            margin: 0 auto;
+        }
+
+        .cell {
+            border: 1px solid var(--grid-line);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            position: relative;
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.5s;
+        }
+
+        .cell::after {
+            content: attr(data-coord);
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            opacity: 0.5;
+        }
+
+        .robot-start {
+            background: rgba(0, 242, 255, 0.3);
+            border-color: var(--primary);
+            box-shadow: inset 0 0 10px var(--primary);
+        }
+
+        .robot-start::before {
+            content: '🤖';
+            font-size: 24px;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .firewall {
+            background: linear-gradient(45deg, var(--danger), #ff5500);
+            opacity: 0.8;
+            box-shadow: inset 0 0 20px #000;
+            border: 2px solid #ff0000;
+        }
+
+        .firewall::before {
+            content: '🔒';
+            color: white;
+            font-size: 20px;
+            text-shadow: 0 0 5px black;
+        }
+
+        .critical-sector {
+            background: rgba(255, 0, 76, 0.3);
+            border-color: var(--danger);
+            animation: criticalFlash 1s infinite;
+        }
+
+        .critical-sector::before {
+            content: '⚠️';
+            position: absolute;
+            top: 5px;
+            right: 5px;
+        }
+
+        @keyframes criticalFlash {
+            0%, 100% { box-shadow: 0 0 0px var(--danger); }
+            50% { box-shadow: 0 0 20px var(--danger); }
+        }
+
+        /* SIDE PANEL */
+        .panel {
+            border-left: 1px solid var(--primary);
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .timer {
+            font-size: 40px;
+            color: var(--primary);
+            text-shadow: 0 0 10px var(--primary);
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+
+        .red-timer {
+            color: var(--danger) !important;
+            text-shadow: 0 0 15px var(--danger) !important;
+            animation: glitch 0.5s infinite;
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+
+        .stats {
+            font-size: 12px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-top: auto;
+        }
+
+        input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid var(--primary);
+            color: white;
+            padding: 15px;
+            font-size: 18px;
+            box-sizing: border-box;
+            outline: none;
+            text-align: center;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            border-radius: 3px;
+        }
+
+        input:focus {
+            border-color: var(--success);
+            box-shadow: 0 0 15px var(--success);
+        }
+
+        button {
+            width: 100%;
+            background: var(--primary);
+            color: black;
+            border: none;
+            padding: 15px;
+            margin-top: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            border-radius: 3px;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: white;
+            box-shadow: 0 0 20px var(--primary);
+        }
+
+        button:disabled {
+            background: #444;
+            color: #888;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        #hintBtn {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--primary);
+            margin-top: 5px;
+            padding: 10px;
+        }
+
+        #hintBtn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .position-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        /* OVERLAY */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .overlay-content {
+            text-align: center;
+            padding: 40px;
+            border: 3px solid var(--primary);
+            background: var(--bg);
+            max-width: 500px;
+        }
+
+        .overlay h1 {
+            font-size: 3em;
+            margin: 0;
+        }
+
+        .overlay .success {
+            color: var(--success);
+        }
+
+        .overlay .fail {
+            color: var(--danger);
+        }
+
+        .code-display {
+            font-size: 3em;
+            color: var(--primary);
+            margin: 20px 0;
+            letter-spacing: 5px;
+            font-family: 'Courier New', monospace;
+        }
+
+        #hintText {
+            background: rgba(0, 242, 255, 0.1);
+            padding: 10px;
+            border-radius: 3px;
+            margin-top: 10px;
+            font-size: 11px;
+            display: none;
+        }
+        
+        .attempt-feedback {
+            height: 20px;
+            margin-top: 10px;
+            text-align: center;
+            font-size: 12px;
+        }
+        
+        .final-message {
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 20px 0;
+            text-align: center;
+            color: #00ffaa;
+        }
+        
+        .glowing-text {
+            animation: glow 2s infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 0 0 10px var(--primary), 0 0 20px var(--primary); }
+            to { text-shadow: 0 0 20px var(--success), 0 0 30px var(--success); }
+        }
+        
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+        
+        .victory-stats {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0, 242, 255, 0.1);
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        
+        .unlock-notice {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 12px;
+            color: #888;
+            animation: pulse 2s infinite;
+        }
+        
+        .access-granted {
+            font-size: 14px;
+            color: var(--success);
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .permanent-message {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            background: var(--bg);
+        }
+        
+        .success-animation {
+            font-size: 4em;
+            animation: celebrate 3s infinite;
+        }
+        
+        @keyframes celebrate {
+            0%, 100% { transform: scale(1) rotate(0deg); color: var(--success); }
+            25% { transform: scale(1.2) rotate(5deg); color: var(--primary); }
+            50% { transform: scale(1.1) rotate(-5deg); color: #ff00ff; }
+            75% { transform: scale(1.3) rotate(3deg); color: #ffff00; }
+        }
+        
+        .final-stats {
+            margin: 30px 0;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Matrix background -->
+    <canvas id="matrixCanvas" class="matrix-bg"></canvas>
+
+    <div id="ui-wrapper">
+        <div class="map-section">
+            <div class="position-indicator" id="positionIndicator">SIMULATION 1</div>
+            <div class="unlock-notice" id="unlockNotice">🔓 0/4 UNLOCKED</div>
+            <h2 id="status-text">SWARM SIMULATION: CRACK THE CODE</h2>
+            <div id="grid">
+                <!-- Grid will be generated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="timer" id="timer">02:00</div>
+            
+            <div class="stats">
+                <strong style="color:white">INTELLIGENCE REPORT:</strong><br>
+                • INITIAL ROBOTS: <span id="initRobots">?</span> UNITS<br>
+                • GROWTH RATE: DOUBLE EVERY CYCLE<br>
+                • PREDICT AFTER: <span id="cycleCount">?</span> CYCLES<br>
+                • SIMULATION <span id="simNumber">1</span>/5<br>
+                <br>
+                <strong style="color:var(--danger)" id="threatText">THREAT DETECTED</strong><br>
+                CALCULATE TOTAL ROBOTS + <br>FIRST COLLAPSE SECTOR<br>
+                <br>
+                <strong style="color:var(--success)">ANSWER FORMAT:</strong><br>
+                [COUNT][SECTOR]<br>
+                EXAMPLE: 48B2
+            </div>
+
+            <div class="input-group">
+                <label>ENTER SHUTDOWN CODE:</label>
+                <input type="text" id="terminalInput" placeholder="____" maxlength="4" autocomplete="off">
+                <button onclick="validateLaunch()">INITIATE DISRUPTION</button>
+                <button id="hintBtn" onclick="toggleHint()">SHOW HINT</button>
+                <div id="hintText">
+                    <!-- Hint will be filled dynamically -->
+                </div>
+                <div class="attempt-feedback" id="attemptFeedback"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUCCESS OVERLAY - Shows when ANY simulation is cracked -->
+    <div id="successOverlay" class="overlay">
+        <div class="overlay-content">
+            <h1 class="success">✅ SWARM DISRUPTED</h1>
+            <div class="code-display">SHUTDOWN: C-17</div>
+            
+            <div class="victory-stats">
+                <p>✅ SIMULATION <span id="completedSimNumber">1</span> TERMINATED</p>
+                <p>✅ CRITICAL SECTOR SECURED</p>
+                <p>✅ SYSTEM STABILIZED</p>
+            </div>
+            
+            <div class="final-message">
+                <p><strong>"Containment successful"</strong></p>
+                <p>The swarm has been neutralized at this position.</p>
+                <p>System returning to standby...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- TIME OUT OVERLAY - Shows when timer runs out -->
+    <div id="timeoutOverlay" class="overlay">
+        <div class="overlay-content">
+            <h1 class="fail">⏰ TIME EXPIRED</h1>
+            
+            <div class="victory-stats">
+                <p>❌ SIMULATION OVERRUN</p>
+                <p>⚠️ CRITICAL SECTOR LOST</p>
+                <p>🔄 ACCESSING NEXT SIMULATION...</p>
+            </div>
+            
+            <div class="final-message">
+                <p><strong>"Swarm breached containment"</strong></p>
+                <p>The robots multiplied beyond critical mass.</p>
+                <p>Emergency protocols activating...</p>
+                <br>
+                <p class="access-granted" id="unlockMessage">UNLOCKING NEXT SIMULATION...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- FINAL PERMANENT MESSAGE - Shows when ANY simulation is successfully cracked -->
+    <div id="finalPermanentMessage" class="permanent-message">
+        <div class="overlay-content">
+            <div class="success-animation">🎮</div>
+            <h1 class="success glowing-text">SYSTEM CRACKED</h1>
+            <div class="code-display">NEXUS ACCESS: GRANTED</div>
+            
+            <div class="final-stats">
+                <p>✅ SIMULATION <span id="finalSimNumber">1</span> COMPLETED</p>
+                <p>✅ TIME REMAINING: <span id="finalTimeRemaining">02:00</span></p>
+                <p>✅ SWARM CONTAINMENT: 100%</p>
+                <p>✅ SECURITY BREACH: PREVENTED</p>
+            </div>
+            
+            <div class="final-message">
+                <p><strong>"ACCESS CODE VERIFIED: SHUTDOWN C-17"</strong></p>
+                <p>The swarm simulation has been successfully terminated.</p>
+                <p>All protocols executed flawlessly.</p>
+                <p>System integrity maintained at maximum capacity.</p>
+                <br>
+                <p><em>"A single correct calculation was all it took.</em></p>
+                <p><em>The exponential threat has been neutralized.</em></p>
+                <p><em>The system is yours."</em></p>
+            </div>
+            
+            <div style="margin-top: 30px; border-top: 1px solid var(--primary); padding-top: 20px;">
+                <p style="font-size: 12px; color: #888;">TERMINAL LOCKED • SIMULATION COMPLETE</p>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // ========== GAME CONFIGURATION ==========
+    const TOTAL_TIME = 120; // 2 minutes in seconds
+    const TOTAL_SIMULATIONS = 5;
+    
+    let currentSimulation = 0;
+    let timerInterval;
+    let remainingTime = TOTAL_TIME;
+    let gameActive = true;
+    let unlockedSimulations = 1; // Start with first simulation unlocked
+    let gameCompleted = false; // Track if any simulation was successfully cracked
+
+    // ========== SIMULATION CONFIGURATIONS ==========
+    const simulations = [
+        {
+            id: 0,
+            name: "SIMULATION 1",
+            start: 'E3',
+            critical: 'C3',
+            firewalls: ['B2', 'B3', 'B4', 'C2', 'C4'],
+            initialRobots: 3,
+            cycles: 4,
+            hint: "Watch the center - robots can't cross the U-shaped firewalls!",
+            answer: "48C3" // 3 × 2⁴ = 48
+        },
+        {
+            id: 1,
+            name: "SIMULATION 2",
+            start: 'A1',
+            critical: 'C2',
+            firewalls: ['A3', 'B3', 'C3', 'D3', 'E3'],
+            initialRobots: 4,
+            cycles: 3,
+            hint: "Firewall creates a vertical barrier - robots spread around it!",
+            answer: "32C2" // 4 × 2³ = 32
+        },
+        {
+            id: 2,
+            name: "SIMULATION 3",
+            start: 'C1',
+            critical: 'D4',
+            firewalls: ['A2', 'B3', 'C4', 'D3', 'E2'],
+            initialRobots: 2,
+            cycles: 5,
+            hint: "Diagonal firewalls create interesting spread patterns!",
+            answer: "64D4" // 2 × 2⁵ = 64
+        },
+        {
+            id: 3,
+            name: "SIMULATION 4",
+            start: 'A5',
+            critical: 'C3',
+            firewalls: ['B1', 'B5', 'D1', 'D5', 'C3'],
+            initialRobots: 5,
+            cycles: 3,
+            hint: "Center sector C3 is isolated by firewalls!",
+            answer: "40C3" // 5 × 2³ = 40
+        },
+        {
+            id: 4,
+            name: "SIMULATION 5",
+            start: 'B2',
+            critical: 'E4',
+            firewalls: ['A4', 'C2', 'C4', 'D2', 'D4'],
+            initialRobots: 6,
+            cycles: 3,
+            hint: "Robots spread from center, boxed in by firewalls!",
+            answer: "48E4" // 6 × 2³ = 48
+        }
+    ];
+
+    // Matrix Effect
+    const canvas = document.getElementById('matrixCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const letters = '01';
+    const fontSize = 14;
+    const columns = canvas.width / fontSize;
+    const drops = Array(Math.floor(columns)).fill(1);
+
+    function drawMatrix() {
+        ctx.fillStyle = 'rgba(5, 5, 5, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = '#00f2ff';
+        ctx.font = `${fontSize}px monospace`;
+        
+        for (let i = 0; i < drops.length; i++) {
+            const text = letters[Math.floor(Math.random() * letters.length)];
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+            
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
+            drops[i]++;
+        }
+    }
+
+    setInterval(drawMatrix, 50);
+
+    // ========== INITIALIZE GAME ==========
+    function initializeGame(simulationIndex) {
+        if (gameCompleted) return; // Don't initialize if game is already completed
+        
+        if (simulationIndex >= unlockedSimulations) {
+            // Cannot access this simulation yet
+            simulationIndex = 0; // Go back to first available
+        }
+        
+        currentSimulation = simulationIndex;
+        gameActive = true;
+        remainingTime = TOTAL_TIME;
+        
+        const simulation = simulations[simulationIndex];
+        
+        // Update displays
+        document.getElementById('positionIndicator').textContent = simulation.name;
+        document.getElementById('unlockNotice').textContent = `🔓 ${unlockedSimulations-1}/4 UNLOCKED`;
+        document.getElementById('simNumber').textContent = simulationIndex + 1;
+        
+        // Update stats display
+        document.getElementById('initRobots').textContent = simulation.initialRobots;
+        document.getElementById('cycleCount').textContent = simulation.cycles;
+        
+        // Update threat text
+        document.getElementById('threatText').innerHTML = 
+            `THREAT LEVEL: ${simulation.initialRobots} ROBOTS × ${simulation.cycles} CYCLES`;
+        
+        // Clear grid
+        const gridEl = document.getElementById('grid');
+        gridEl.innerHTML = '';
+        
+        // Create grid
+        const rows = ['A', 'B', 'C', 'D', 'E'];
+        
+        for (let r = 0; r < 5; r++) {
+            for (let c = 1; c <= 5; c++) {
+                const coord = rows[r] + c;
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.setAttribute('data-coord', coord);
+                
+                // Mark critical sector
+                if (coord === simulation.critical) {
+                    cell.classList.add('critical-sector');
+                }
+                
+                // Mark robot start position
+                if (coord === simulation.start) {
+                    cell.classList.add('robot-start');
+                }
+                
+                // Add firewalls
+                if (simulation.firewalls.includes(coord)) {
+                    cell.classList.add('firewall');
+                }
+                
+                gridEl.appendChild(cell);
+            }
+        }
+        
+        // Update status text
+        document.getElementById('status-text').textContent = 
+            `${simulation.initialRobots} BOTS AT ${simulation.start}, ${simulation.cycles} CYCLES`;
+        
+        // Reset input and feedback
+        document.getElementById('terminalInput').value = '';
+        document.getElementById('hintText').style.display = 'none';
+        document.getElementById('attemptFeedback').textContent = '';
+        document.getElementById('attemptFeedback').style.color = '';
+        
+        // Reset timer display
+        const timerEl = document.getElementById('timer');
+        timerEl.textContent = '02:00';
+        timerEl.classList.remove('red-timer');
+        
+        // Clear any existing timer
+        clearInterval(timerInterval);
+        
+        // Start timer
+        startTimer();
+    }
+
+    // ========== TIMER FUNCTIONS ==========
+    function startTimer() {
+        remainingTime = TOTAL_TIME;
+        const timerEl = document.getElementById('timer');
+        timerEl.classList.remove('red-timer');
+        
+        clearInterval(timerInterval);
+        
+        timerInterval = setInterval(() => {
+            remainingTime--;
+            
+            // Update timer display
+            let minutes = Math.floor(remainingTime / 60);
+            let seconds = remainingTime % 60;
+            timerEl.innerHTML = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Last 30 seconds warning
+            if (remainingTime <= 30) {
+                timerEl.classList.add('red-timer');
+            }
+            
+            // Time's up - UNLOCK NEXT SIMULATION
+            if (remainingTime <= 0) {
+                clearInterval(timerInterval);
+                gameActive = false;
+                handleTimeout();
+            }
+        }, 1000);
+    }
+
+    // ========== GAME LOGIC ==========
+    function validateLaunch() {
+        if (!gameActive || gameCompleted) return;
+        
+        const input = document.getElementById('terminalInput').value.toUpperCase();
+        const simulation = simulations[currentSimulation];
+        
+        // Check if input matches pattern
+        if (!input.match(/^\d{2}[A-E][1-5]$/)) {
+            document.getElementById('attemptFeedback').textContent = "ERROR: Format must be XXYZ (e.g., 48B2)";
+            document.getElementById('attemptFeedback').style.color = "var(--danger)";
+            return;
+        }
+        
+        if (input === simulation.answer) {
+            // CRACKED SUCCESSFULLY - SHOW FINAL PERMANENT MESSAGE
+            clearInterval(timerInterval);
+            gameActive = false;
+            gameCompleted = true; // Mark game as completed
+            
+            // Show final permanent message
+            showFinalPermanentMessage();
+        } else {
+            // Wrong answer feedback
+            const inputEl = document.getElementById('terminalInput');
+            inputEl.style.borderColor = 'var(--danger)';
+            inputEl.style.boxShadow = '0 0 15px var(--danger)';
+            
+            // Visual shake effect
+            inputEl.animate([
+                { transform: 'translateX(-10px)' },
+                { transform: 'translateX(10px)' },
+                { transform: 'translateX(-10px)' },
+                { transform: 'translateX(0)' }
+            ], {
+                duration: 300,
+                iterations: 1
+            });
+            
+            // Provide feedback (NO ANSWER REVEAL)
+            const enteredCount = parseInt(input.substring(0, 2));
+            const enteredSector = input.substring(2);
+            const expectedCount = simulation.initialRobots * Math.pow(2, simulation.cycles);
+            
+            let feedback = "";
+            if (enteredSector !== simulation.critical) {
+                feedback = `Sector ${enteredSector} is not the bottleneck`;
+            } else if (enteredCount < expectedCount) {
+                feedback = `Count too low - check your calculation`;
+            } else if (enteredCount > expectedCount) {
+                feedback = `Count too high - check your calculation`;
+            } else {
+                feedback = "Incorrect - check sector and count";
+            }
+            
+            document.getElementById('attemptFeedback').textContent = feedback;
+            document.getElementById('attemptFeedback').style.color = "var(--danger)";
+            
+            // Reset border after delay
+            setTimeout(() => {
+                inputEl.style.borderColor = 'var(--primary)';
+                inputEl.style.boxShadow = 'none';
+            }, 2000);
+        }
+    }
+
+    // ========== OVERLAY FUNCTIONS ==========
+    function showFinalPermanentMessage() {
+        // Hide all UI elements
+        document.getElementById('ui-wrapper').style.display = 'none';
+        document.getElementById('successOverlay').style.display = 'none';
+        document.getElementById('timeoutOverlay').style.display = 'none';
+        
+        // Update final message with simulation details
+        const simulation = simulations[currentSimulation];
+        document.getElementById('finalSimNumber').textContent = currentSimulation + 1;
+        
+        // Format time remaining
+        const minutes = Math.floor(remainingTime / 60);
+        const seconds = remainingTime % 60;
+        document.getElementById('finalTimeRemaining').textContent = 
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Show the final permanent message
+        document.getElementById('finalPermanentMessage').style.display = 'flex';
+        
+        // Create celebration effects
+        createPermanentCelebration();
+    }
+
+    function handleTimeout() {
+        // Time ran out - UNLOCK NEXT SIMULATION
+        if (unlockedSimulations <= currentSimulation + 1 && unlockedSimulations < TOTAL_SIMULATIONS) {
+            unlockedSimulations++;
+            document.getElementById('unlockMessage').textContent = `UNLOCKING SIMULATION ${unlockedSimulations}...`;
+        }
+        
+        // Show timeout overlay
+        document.getElementById('timeoutOverlay').style.display = 'flex';
+        
+        // Auto-continue to next simulation after 3 seconds
+        setTimeout(() => {
+            proceedToNextSimulation();
+        }, 3000);
+    }
+
+    function proceedToNextSimulation() {
+        // Hide timeout overlay
+        document.getElementById('timeoutOverlay').style.display = 'none';
+        
+        // Find next unlocked simulation
+        let nextSimulation = currentSimulation;
+        
+        // Go to next unlocked simulation
+        for (let i = currentSimulation + 1; i < unlockedSimulations; i++) {
+            nextSimulation = i;
+            break;
+        }
+        
+        // If at the end, go back to first unlocked
+        if (nextSimulation === currentSimulation) {
+            nextSimulation = 0;
+        }
+        
+        // Start next simulation
+        setTimeout(() => {
+            initializeGame(nextSimulation);
+        }, 500);
+    }
+
+    function toggleHint() {
+        if (gameCompleted) return; // Don't show hints if game is completed
+        
+        const hintEl = document.getElementById('hintText');
+        const simulation = simulations[currentSimulation];
+        
+        if (hintEl.style.display === 'block') {
+            hintEl.style.display = 'none';
+        } else {
+            hintEl.innerHTML = `<strong>HINT FOR ${simulation.name}:</strong><br>${simulation.hint}<br><br>Starting robots = ${simulation.initialRobots}<br>Calculate for ${simulation.cycles} cycles<br>First bottleneck = sector ${simulation.critical}`;
+            hintEl.style.display = 'block';
+        }
+    }
+
+    function createPermanentCelebration() {
+        // Continuous matrix effect
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.style.position = 'fixed';
+        finalCanvas.style.top = '0';
+        finalCanvas.style.left = '0';
+        finalCanvas.style.width = '100%';
+        finalCanvas.style.height = '100%';
+        finalCanvas.style.zIndex = '999';
+        finalCanvas.style.pointerEvents = 'none';
+        finalCanvas.style.opacity = '0.3';
+        document.body.appendChild(finalCanvas);
+        
+        const finalCtx = finalCanvas.getContext('2d');
+        finalCanvas.width = window.innerWidth;
+        finalCanvas.height = window.innerHeight;
+        
+        const finalLetters = '01NEXUSCRACKEDACCESS';
+        const finalFontSize = 20;
+        const finalColumns = finalCanvas.width / finalFontSize;
+        const finalDrops = Array(Math.floor(finalColumns)).fill(1);
+        
+        function drawFinalMatrix() {
+            finalCtx.fillStyle = 'rgba(5, 5, 5, 0.1)';
+            finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+            
+            finalCtx.fillStyle = '#39ff14';
+            finalCtx.font = `${finalFontSize}px monospace`;
+            
+            for (let i = 0; i < finalDrops.length; i++) {
+                const text = finalLetters[Math.floor(Math.random() * finalLetters.length)];
+                finalCtx.fillText(text, i * finalFontSize, finalDrops[i] * finalFontSize);
+                
+                if (finalDrops[i] * finalFontSize > finalCanvas.height && Math.random() > 0.975) {
+                    finalDrops[i] = 0;
+                }
+                finalDrops[i]++;
+            }
+        }
+        
+        setInterval(drawFinalMatrix, 80);
+        
+        // Add occasional glowing effects
+        setInterval(() => {
+            const elements = document.querySelectorAll('.glowing-text, .code-display');
+            elements.forEach(el => {
+                el.style.animation = 'none';
+                setTimeout(() => {
+                    el.style.animation = 'glow 2s infinite alternate';
+                }, 10);
+            });
+        }, 5000);
+    }
+
+    // ========== KEYBOARD SHORTCUTS ==========
+    document.addEventListener('keydown', function(e) {
+        if (gameCompleted) return; // Ignore keys if game is completed
+        
+        const inputEl = document.getElementById('terminalInput');
+        
+        // Enter key submits
+        if (e.key === 'Enter' && gameActive) {
+            validateLaunch();
+        }
+        
+        // Space bar for hint
+        if (e.key === ' ' && gameActive) {
+            e.preventDefault();
+            toggleHint();
+        }
+        
+        // Number keys 1-5 jump to unlocked simulations
+        if (e.key >= '1' && e.key <= '5') {
+            const simIndex = parseInt(e.key) - 1;
+            if (simIndex < unlockedSimulations) {
+                clearInterval(timerInterval);
+                initializeGame(simIndex);
+            }
+        }
+        
+        // Focus input on any key press
+        if (e.key.length === 1 && gameActive && e.key !== ' ') {
+            inputEl.focus();
+        }
+    });
+
+    // ========== WINDOW RESIZE HANDLER ==========
+    window.addEventListener('resize', function() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    });
+
+    // ========== INITIALIZE ON LOAD ==========
+    window.onload = function() {
+        // Start with first simulation
+        initializeGame(0);
+        
+        // Focus input field
+        setTimeout(() => {
+            const inputEl = document.getElementById('terminalInput');
+            if (inputEl) inputEl.focus();
+        }, 1000);
+    };
+</script>
+</body>
+</html>

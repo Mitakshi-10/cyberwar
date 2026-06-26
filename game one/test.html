@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NEXUS-Ω Prediction Engine</title>
+<style>
+    body {
+        background-color: #050505;
+        color: #00ff9c;
+        font-family: "Courier New", monospace;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+    }
+
+    .container {
+        padding: 30px;
+        max-width: 900px;
+        margin: auto;
+        transition: opacity 0.5s;
+    }
+
+    h1 {
+        text-align: center;
+        letter-spacing: 3px;
+        color: #00ffaa;
+    }
+
+    .subtitle {
+        text-align: center;
+        color: #ff4d4d;
+        margin-bottom: 30px;
+    }
+
+    .panel {
+        border: 1px solid #00ff9c;
+        padding: 20px;
+        margin-bottom: 20px;
+        background: rgba(0, 255, 156, 0.03);
+    }
+
+    .panel h2 {
+        color: #00ffaa;
+        margin-bottom: 10px;
+    }
+
+    .sequence {
+        font-size: 18px;
+        letter-spacing: 2px;
+    }
+
+    .warning {
+        color: #ff4d4d;
+        margin-top: 30px;
+        text-align: center;
+        font-size: 14px;
+    }
+
+    .input-section {
+        text-align: center;
+        margin-top: 30px;
+    }
+
+    input {
+        background: black;
+        border: 1px solid #00ff9c;
+        color: #00ff9c;
+        padding: 10px;
+        font-size: 18px;
+        width: 200px;
+        text-align: center;
+    }
+
+    button {
+        background: #00ff9c;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        margin-left: 10px;
+        color: #050505;
+        font-weight: bold;
+    }
+
+    button:hover {
+        background: #00cc7a;
+    }
+
+    button:disabled {
+        background: #666;
+        cursor: not-allowed;
+    }
+
+    .result {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 18px;
+        min-height: 60px;
+    }
+
+    .glitch {
+        animation: glitch 1s infinite;
+    }
+
+    @keyframes glitch {
+        0% { opacity: 1; }
+        50% { opacity: 0.6; }
+        100% { opacity: 1; }
+    }
+
+    .timer {
+        text-align: center;
+        color: #ff4d4d;
+        font-size: 16px;
+        margin-top: 10px;
+        display: none;
+    }
+
+    .access-granted {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #050505;
+        color: #00ff9c;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .access-granted h2 {
+        font-size: 3em;
+        color: #00ff9c;
+        margin-bottom: 20px;
+    }
+
+    .access-granted p {
+        font-size: 1.2em;
+        max-width: 600px;
+        margin-bottom: 30px;
+    }
+
+    .matrix-effect {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: -1;
+        opacity: 0.3;
+    }
+
+    .blink {
+        animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+
+    .countdown {
+        font-size: 2em;
+        color: #ff4d4d;
+        margin: 20px 0;
+        font-family: monospace;
+    }
+
+    .return-button {
+        margin-top: 30px;
+        padding: 15px 30px;
+        font-size: 18px;
+        background: #00ff9c;
+        color: #050505;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .return-button:hover {
+        background: #00cc7a;
+    }
+</style>
+</head>
+
+<body>
+<!-- Matrix Effect Canvas -->
+<canvas id="matrix" class="matrix-effect"></canvas>
+
+<!-- Main Container -->
+<div class="container" id="mainContainer">
+    <h1>NEXUS-Ω</h1>
+    <div class="subtitle glitch">PREDICTIVE BEHAVIOR ANALYSIS ENGINE</div>
+
+    <div class="panel">
+        <h2>Population Forecast</h2>
+        <div class="sequence">
+            120 → 240 → 480 → ?
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>Energy Consumption Index</h2>
+        <div class="sequence">
+            5 → 8 → 13 → 21 → ?
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>Human Compliance Rate (%)</h2>
+        <div class="sequence">
+            98 → 96 → 94 → 91 → ?
+        </div>
+    </div>
+
+    <div class="warning">
+        SYSTEM CONFIDENCE: 99.98% <br>
+        ERROR RATE: &lt; 0.02%
+    </div>
+
+    <div class="input-section">
+        <p>ENTER AI-PREDICTED VALUE:</p>
+        <input type="text" id="answer" placeholder="Input value">
+        <button onclick="checkAnswer()" id="submitBtn">SUBMIT</button>
+        <div class="timer" id="timer">
+            SYSTEM LOCKED FOR: <span id="countdown">30</span> SECONDS
+        </div>
+    </div>
+
+    <div class="result" id="result"></div>
+    
+    <p style="color:#888;font-size:13px;text-align:center;margin-top:30px;">
+        NOTE: AI assumes perfect rationality in human behavior.
+    </p>
+</div>
+
+<!-- Access Granted Page -->
+<div class="access-granted" id="accessGranted">
+    <h2 class="blink">ACCESS GRANTED</h2>
+    <div class="countdown" id="accessCountdown">5</div>
+    <p>AI FAULT IDENTIFIED<br>
+    <strong>ERROR KEY: 4179</strong></p>
+    <p>Decryption sequence initiated...</p>
+    <p>Accessing secure database...</p>
+    <p>System override in progress...</p>
+    <button class="return-button" onclick="returnToMain()">RETURN TO INTERFACE</button>
+</div>
+
+<script>
+// Matrix Effect
+const canvas = document.getElementById('matrix');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const letters = '010101010101010101010101';
+const fontSize = 14;
+const columns = canvas.width / fontSize;
+const drops = Array(Math.floor(columns)).fill(1);
+
+function drawMatrix() {
+    ctx.fillStyle = 'rgba(5, 5, 5, 0.1)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = '#00ff9c';
+    ctx.font = `${fontSize}px monospace`;
+    
+    for (let i = 0; i < drops.length; i++) {
+        const text = letters[Math.floor(Math.random() * letters.length)];
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+        
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+            drops[i] = 0;
+        }
+        drops[i]++;
+    }
+}
+
+// Timer variables
+let attempts = 3;
+let timerActive = false;
+let countdownInterval;
+let accessCountdownInterval;
+
+function checkAnswer() {
+    const input = document.getElementById("answer");
+    const result = document.getElementById("result");
+    const submitBtn = document.getElementById("submitBtn");
+    const timer = document.getElementById("timer");
+    const value = input.value.trim();
+
+    if (timerActive) {
+        return;
+    }
+
+    if (attempts <= 0) {
+        result.style.color = "#ff4d4d";
+        result.innerHTML = "SYSTEM LOCKED. INITIATING TIMER...";
+        startTimer();
+        return;
+    }
+
+    if (value === "92") {
+        result.style.color = "#00ff9c";
+        result.innerHTML = "VERIFICATION SUCCESSFUL...";
+        submitBtn.disabled = true;
+        input.disabled = true;
+        
+        // Show access granted page after delay
+        setTimeout(() => {
+            document.getElementById('mainContainer').style.display = 'none';
+            document.getElementById('accessGranted').style.display = 'flex';
+            startAccessCountdown();
+        }, 1500);
+    } else {
+        attempts--;
+        result.style.color = "#ff4d4d";
+        result.innerHTML = `ACCESS DENIED — ATTEMPTS LEFT: ${attempts}`;
+        
+        if (attempts <= 0) {
+            setTimeout(() => {
+                startTimer();
+            }, 1000);
+        }
+    }
+}
+
+function startTimer() {
+    if (timerActive) return;
+    
+    timerActive = true;
+    const timer = document.getElementById("timer");
+    const countdown = document.getElementById("countdown");
+    const submitBtn = document.getElementById("submitBtn");
+    const input = document.getElementById("answer");
+    
+    timer.style.display = "block";
+    submitBtn.disabled = true;
+    input.disabled = true;
+    
+    let timeLeft = 30;
+    
+    countdownInterval = setInterval(() => {
+        timeLeft--;
+        countdown.textContent = timeLeft;
+        
+        if (timeLeft <= 0) {
+            clearInterval(countdownInterval);
+            timer.style.display = "none";
+            submitBtn.disabled = false;
+            input.disabled = false;
+            attempts = 3;
+            timerActive = false;
+            document.getElementById("result").innerHTML = "SYSTEM UNLOCKED. TRY AGAIN.";
+        }
+    }, 1000);
+}
+
+function startAccessCountdown() {
+    const countdown = document.getElementById("accessCountdown");
+    let timeLeft = 5;
+    
+    accessCountdownInterval = setInterval(() => {
+        timeLeft--;
+        countdown.textContent = timeLeft;
+        
+        if (timeLeft <= 0) {
+            clearInterval(accessCountdownInterval);
+        }
+    }, 1000);
+}
+
+function returnToMain() {
+    document.getElementById('accessGranted').style.display = 'none';
+    document.getElementById('mainContainer').style.display = 'block';
+    
+    // Reset form
+    document.getElementById("answer").value = "";
+    document.getElementById("answer").disabled = false;
+    document.getElementById("submitBtn").disabled = false;
+    document.getElementById("result").innerHTML = "";
+    attempts = 3;
+    
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+    }
+    if (accessCountdownInterval) {
+        clearInterval(accessCountdownInterval);
+    }
+    
+    timerActive = false;
+    document.getElementById("timer").style.display = "none";
+}
+
+// Resize canvas on window resize
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+
+// Start matrix animation
+setInterval(drawMatrix, 50);
+
+// Allow Enter key to submit
+document.getElementById("answer").addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        checkAnswer();
+    }
+});
+</script>
+</body>
+</html>
